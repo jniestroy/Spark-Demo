@@ -823,7 +823,80 @@ import numpy as np
 import scipy.signal as ss
 
 # detrended fluctuation analysis
+def CO_Embed2_Basic(y,tau = 5,scale = 1):
+    '''
+    CO_Embed2_Basic Point density statistics in a 2-d embedding space
+    %
+    % Computes a set of point density measures in a plot of y_i against y_{i-tau}.
+    %
+    % INPUTS:
+    % y, the input time series
+    %
+    % tau, the time lag (can be set to 'tau' to set the time lag the first zero
+    %                       crossing of the autocorrelation function)
+    %scale since .1 and .5 don't make sense for HR RESP ...
+    % Outputs include the number of points near the diagonal, and similarly, the
+    % number of points that are close to certain geometric shapes in the y_{i-tau},
+    % y_{tau} plot, including parabolas, rings, and circles.
+    '''
+    if tau == 'tau':
 
+        tau = CO_FirstZero(y,'ac')
+
+    xt = y[:-tau]
+    xtp = y[tau:]
+    N = len(y) - tau
+
+    outDict = {}
+
+    outDict['updiag01'] = np.sum((np.absolute(xtp - xt) < 1*scale)) / N
+    outDict['updiag05'] = np.sum((np.absolute(xtp - xt) < 5*scale)) / N
+
+    outDict['downdiag01'] = np.sum((np.absolute(xtp + xt) < 1*scale)) / N
+    outDict['downdiag05'] = np.sum((np.absolute(xtp + xt) < 5*scale)) / N
+
+    outDict['ratdiag01'] = outDict['updiag01'] / outDict['downdiag01']
+    outDict['ratdiag05'] = outDict['updiag05'] / outDict['downdiag05']
+
+    outDict['parabup01'] = np.sum( ( np.absolute( xtp - np.square(xt) ) < 1 * scale ) ) / N
+    outDict['parabup05'] = np.sum( ( np.absolute( xtp - np.square(xt) ) < 5 * scale ) ) / N
+
+    outDict['parabdown01'] = np.sum( ( np.absolute( xtp + np.square(xt) ) < 1 * scale ) ) / N
+    outDict['parabdown05'] = np.sum( ( np.absolute( xtp + np.square(xt) ) < 5 * scale ) ) / N
+
+    outDict['parabup01_1'] = np.sum( ( np.absolute( xtp -( np.square(xt) + 1 ) ) < 1 * scale ) ) / N
+    outDict['parabup05_1'] = np.sum( ( np.absolute( xtp - (np.square(xt) + 1)) < 5 * scale ) ) / N
+
+    outDict['parabdown01_1'] = np.sum( ( np.absolute( xtp + np.square(xt) - 1 ) < 1 * scale ) ) / N
+    outDict['parabdown05_1'] = np.sum( ( np.absolute( xtp + np.square(xt) - 1) < 5 * scale ) ) / N
+
+    outDict['parabup01_n1'] = np.sum( ( np.absolute( xtp -( np.square(xt) - 1 ) ) < 1 * scale ) ) / N
+    outDict['parabup05_n1'] = np.sum( ( np.absolute( xtp - (np.square(xt) - 1)) < 5 * scale ) ) / N
+
+    outDict['parabdown01_n1'] = np.sum( ( np.absolute( xtp + np.square(xt) + 1 ) < 1 * scale ) ) / N
+    outDict['parabdown05_n1'] = np.sum( ( np.absolute( xtp + np.square(xt) + 1) < 5 * scale ) ) / N
+
+    outDict['ring1_01'] = np.sum( np.absolute( np.square(xtp) + np.square(xt) - 1 ) < 1 * scale ) / N
+    outDict['ring1_02'] = np.sum( np.absolute( np.square(xtp) + np.square(xt) - 1 ) < 2 * scale ) / N
+    outDict['ring1_05'] = np.sum( np.absolute( np.square(xtp) + np.square(xt) - 1 ) < 5 * scale ) / N
+
+    outDict['incircle_01'] = np.sum(  np.square(xtp) + np.square(xt)  < 1 * scale ) / N
+    outDict['incircle_02'] = np.sum( np.square(xtp) + np.square(xt)  < 2 * scale ) / N
+    outDict['incircle_05'] = np.sum(  np.square(xtp) + np.square(xt)  < 5 * scale ) / N
+
+
+    outDict['incircle_1'] = np.sum(  np.square(xtp) + np.square(xt)  < 10 * scale ) / N
+    outDict['incircle_2'] = np.sum( np.square(xtp) + np.square(xt)  < 20 * scale ) / N
+    outDict['incircle_3'] = np.sum(  np.square(xtp) + np.square(xt)  < 30 * scale ) / N
+
+    outDict['medianincircle'] = np.median([outDict['incircle_01'], outDict['incircle_02'], outDict['incircle_05'], \
+                            outDict['incircle_1'], outDict['incircle_2'], outDict['incircle_3']])
+
+    outDict['stdincircle'] = np.std([outDict['incircle_01'], outDict['incircle_02'], outDict['incircle_05'], \
+                            outDict['incircle_1'], outDict['incircle_2'], outDict['incircle_3']],ddof = 1)
+
+
+    return outDict
 def calc_rms(x, scale):
     """
     windowed Root Mean Square (RMS) with linear detrending.
@@ -1092,87 +1165,87 @@ def run_histogram_algos(y,algos = 'all',results = {},impute = False):
         y = y[~np.isnan(y)]
 
     if 'DN_Mean' in algos:
-        results['mean'] = DN_Mean(y)
+        results['DN_Mean'] = DN_Mean(y)
 
     if 'DN_Range' in algos:
-        results['range'] = DN_Range(y)
+        results['DN_Range'] = DN_Range(y)
 
     if 'DN_IQR' in algos:
-        results['iqr'] = DN_IQR(y)
+        results['DN_IQR'] = DN_IQR(y)
 
     if 'DN_Median' in algos:
-        results['median'] = DN_Median(y)
+        results['DN_Median'] = DN_Median(y)
 
     if 'DN_MinMax' in algos:
-        results['max'] = DN_MinMax(y)
-        results['min'] = DN_MinMax(y,'min')
+        results['DN_Max'] = DN_MinMax(y)
+        results['DN_Min'] = DN_MinMax(y,'min')
 
     if 'DN_Mode' in algos:
-        results['mode'] = DN_Mode(y)
+        results['DN_Mode'] = DN_Mode(y)
 
     if 'DN_Cumulants' in algos:
-        results['skew1'] = DN_Cumulants(y,'skew1')
-        results['skew2'] = DN_Cumulants(y,'skew2')
-        results['kurt1'] = DN_Cumulants(y,'kurt1')
-        results['kurt2'] = DN_Cumulants(y,'kurt2')
+        results['DN_skew1'] = DN_Cumulants(y,'skew1')
+        results['DN_skew2'] = DN_Cumulants(y,'skew2')
+        results['DN_kurt1'] = DN_Cumulants(y,'kurt1')
+        results['DN_kurt2'] = DN_Cumulants(y,'kurt2')
 
     if 'DN_Burstiness' in algos:
-        results['Burstiness'] = DN_Burstiness(y)
+        results['DN_Burstiness'] = DN_Burstiness(y)
 
     if 'DN_Unique' in algos:
-        results['Percent Unique'] = DN_Unique(y)
+        results['DN_Unique'] = DN_Unique(y)
 
     if 'DN_Withinp' in algos:
-        results['Within 1 std'] = DN_Withinp(y)
-        results['Within 2 std'] = DN_Withinp(y,2)
+        results['DN_Withinp 1'] = DN_Withinp(y)
+        results['DN_Withinp 2'] = DN_Withinp(y,2)
 
     if 'EN_ShannonEn':
-        results['Shannon Entropy'] = EN_ShannonEn(y)
+        results['EN_ShannonEntropy'] = EN_ShannonEn(y)
 
     if 'DN_STD' in algos:
-        results['std'] = DN_STD(y)
-        if results['std'] == 0:
+        results['DN_std'] = DN_STD(y)
+        if results['DN_std'] == 0:
             return results
 
     if 'DN_Moments' in algos:
-        results['Moment 2'] = DN_Moments(y,2)
-        results['Moment 3'] = DN_Moments(y,3)
-        results['Moment 4'] = DN_Moments(y,4)
-        results['Moment 5'] = DN_Moments(y,5)
-        results['Moment 6'] = DN_Moments(y,6)
+        results['DN_Moment 2'] = DN_Moments(y,2)
+        results['DN_Moment 3'] = DN_Moments(y,3)
+        results['DN_Moment 4'] = DN_Moments(y,4)
+        results['DN_Moment 5'] = DN_Moments(y,5)
+        results['DN_Moment 6'] = DN_Moments(y,6)
 
     if 'DN_pleft' in algos:
-        results['pleft'] = DN_pleft(y)
+        results['DN_pleft'] = DN_pleft(y)
 
     if 'DN_CustomSkewness' in algos:
-        results['Pearson Skew'] = DN_CustomSkewness(y)
+        results['DN_CustomSkewness'] = DN_CustomSkewness(y)
 
     if 'DN_HighLowMu' in algos:
-        results['High Low Mean Ratio'] = DN_HighLowMu(y)
+        results['DN_HighLowMu'] = DN_HighLowMu(y)
 
 
     if 'DN_nlogL_norm' in algos:
-        results['Log liklihood of Norm fit'] = DN_nlogL_norm(y)
+        results['DN_nlogL_norm'] = DN_nlogL_norm(y)
 
     if 'DN_Quantile' in algos:
-        results['Quantile 50'] = DN_Quantile(y)
-        results['Quantile 75'] = DN_Quantile(y,.75)
-        results['Quantile 90'] = DN_Quantile(y,.90)
-        results['Quantile 95'] = DN_Quantile(y,.95)
-        results['Quantile 99'] = DN_Quantile(y,.99)
+        results['DN_Quantile_50'] = DN_Quantile(y)
+        results['DN_Quantile_75'] = DN_Quantile(y,.75)
+        results['DN_Quantile_90'] = DN_Quantile(y,.90)
+        results['DN_Quantile_95'] = DN_Quantile(y,.95)
+        results['DN_Quantile_99'] = DN_Quantile(y,.99)
 
     if 'DN_RemovePoints' in algos:
         out = DN_RemovePoints(y,p = .5)
         results = parse_outputs(out,results,'DN_RemovePoints')
 
     if 'DN_Spread':
-        results['Mean Abs Deviation'] = DN_Spread(y,'mad')
-        results['Median Abs Deviation'] = DN_Spread(y,'mead')
+        results['DN_Spread_mad'] = DN_Spread(y,'mad')
+        results['DN__Spread_mead'] = DN_Spread(y,'mead')
 
     if 'DN_TrimmedMean' in algos:
-        results['trimmed mean 50'] = DN_TrimmedMean(y,.5)
-        results['trimmed mean 75'] = DN_TrimmedMean(y,.75)
-        results['trimmed mean 25'] = DN_TrimmedMean(y,.25)
+        results['DN_TrimmedMean 50'] = DN_TrimmedMean(y,.5)
+        results['DN_TrimmedMean 75'] = DN_TrimmedMean(y,.75)
+        results['DN_TrimmedMean 25'] = DN_TrimmedMean(y,.25)
 
     if 'DN_cv' in algos:
         results['DN_cv 1'] = DN_cv(y)
@@ -1181,6 +1254,452 @@ def run_histogram_algos(y,algos = 'all',results = {},impute = False):
 
     return results
 
+def DN_RemovePoints(y,removeHow = 'absfar',p = .1):
+
+    if removeHow == 'absclose' or 'absclose' in removeHow:
+
+        i =  np.argsort(-np.absolute(y),kind = 'mergesort')
+
+    elif removeHow == 'absfar' or 'absfar' in removeHow:
+
+        i = np.argsort(np.absolute(y),kind = 'mergesort')
+
+    elif removeHow == 'min' or 'min' in removeHow:
+
+        i =  np.argsort(-y,kind = 'mergesort')
+
+    elif removeHow == 'max' or 'max' in removeHow:
+
+        i = np.argsort(y,kind = 'mergesort')
+
+    else:
+
+        return
+
+    N = len(y)
+
+    out = {}
+
+    rKeep = np.sort(i[0:int(np.round(N*(1-p)))])
+    y_trim = y[rKeep]
+
+    #print(rKeep)
+
+
+    acf_y = SUB_acf(y,8)
+    acf_y_trim = SUB_acf(y_trim,8)
+
+    out['fzcacrat'] = CO_FirstZero(y_trim,'ac')/CO_FirstZero(y,'ac')
+
+    out['ac1rat'] = acf_y_trim[0]/acf_y[0]
+
+    out['ac1diff'] = np.absolute(acf_y_trim[0]-acf_y[0])
+
+    out['ac2rat'] = acf_y_trim[1]/acf_y[1]
+
+    out['ac2diff'] = np.absolute(acf_y_trim[1]-acf_y[1])
+
+    out['ac3rat'] = acf_y_trim[2]/acf_y[2]
+
+    out['ac3diff'] = np.absolute(acf_y_trim[2]-acf_y[2])
+
+    out['sumabsacfdiff'] = sum(np.absolute(acf_y_trim-acf_y))
+
+    out['mean'] = np.mean(y_trim)
+
+    out['median'] = np.median(y_trim)
+
+    out['std'] = np.std(y_trim,ddof = 1)
+
+    if stats.skew(y) != 0:
+
+        out['skewnessrat'] = stats.skew(y_trim)/stats.skew(y)
+    try:
+
+        out['kurtosisrat'] = stats.kurtosis(y_trim,fisher=False)/stats.kurtosis(y,fisher=False)
+
+    except:
+
+        pass
+
+    return out
+def BF_Binarize(y,binarizeHow = 'diff'):
+
+    if binarizeHow == 'diff':
+
+        yBin = stepBinary(np.diff(y))
+
+    if binarizeHow == 'mean':
+
+        yBin = stepBinary(y - np.mean(y))
+
+    if binarizeHow == 'median':
+
+        yBin = stepBinary(y - np.median(y))
+
+    if binarizeHow == 'iqr':
+
+        iqr = np.quantile(y,[.25,.75])
+
+        iniqr = np.logical_and(y > iqr[0], y<iqr[1])
+
+        yBin = np.zeros(len(y))
+
+        yBin[iniqr] = 1
+
+    return yBin
+
+def stepBinary(X):
+
+    Y = np.zeros(len(X))
+
+    Y[ X > 0 ] = 1
+
+    return Y
+def DK_crinkle(x):
+
+    x = x - np.mean(x)
+
+    x2 = np.mean(np.square(x))**2
+
+    if x2 == 0:
+        return 0
+
+    d2 = 2*x[1:-1] - x[0:-2] - x[2:]
+
+    return np.mean(np.power(d2,4)) / x2
+
+def DK_theilerQ(x):
+    x2 = np.mean(np.square(x))**(3/2)
+
+    if x2 == 0:
+        return 0
+
+    d2 = x[0:-1] + x[1:]
+    Q = np.mean(np.power(d2,3)) / x2
+
+    return Q
+
+def SB_BinaryStats(y,binaryMethod = 'diff'):
+
+    yBin = BF_Binarize(y,binaryMethod)
+
+    N = len(yBin)
+
+    outDict = {}
+
+    outDict['pupstat2'] = np.sum((yBin[math.floor(N /2):] == 1))  / np.sum((yBin[:math.floor(N /2)] == 1))
+
+    stretch1 = []
+    stretch0 = []
+    count = 1
+
+
+
+    for i in range(1,N):
+
+        if yBin[i] == yBin[i - 1]:
+
+            count = count + 1
+
+        else:
+
+            if yBin[i - 1] == 1:
+
+                stretch1.append(count)
+
+            else:
+
+                stretch0.append(count)
+            count = 1
+    if yBin[N-1] == 1:
+
+        stretch1.append(count)
+
+    else:
+
+        stretch0.append(count)
+
+
+    outDict['pstretch1'] = len(stretch1) / N
+
+    if stretch0 == []:
+
+        outDict['longstretch0'] = 0
+        outDict['meanstretch0'] = 0
+        outDict['stdstretch0'] = np.nan
+
+    else:
+
+        outDict['longstretch0'] = np.max(stretch0)
+        outDict['meanstretch0'] = np.mean(stretch0)
+        outDict['stdstretch0'] = np.std(stretch0,ddof = 1)
+
+    if stretch1 == []:
+
+        outDict['longstretch1'] = 0
+        outDict['meanstretch1'] = 0
+        outDict['stdstretch1'] = np.nan
+
+    else:
+
+        outDict['longstretch1'] = np.max(stretch1)
+        outDict['meanstretch1'] = np.mean(stretch1)
+        outDict['stdstretch1'] = np.std(stretch1,ddof = 1)
+
+    try:
+
+        outDict['meanstretchdiff'] = outDict['meanstretch1'] - outDict['meanstretch0']
+        outDict['stdstretchdiff'] = outDict['stdstretch1'] - outDict['stdstretch0']
+
+    except:
+
+        outDict['meanstretchdiff'] = np.nan
+        outDict['stdstretchdiff'] = np.nan
+
+
+    return outDict
+def SY_StatAv(y,whatType = 'seg',n = 5):
+
+    N = len(y)
+
+    if whatType == 'seg':
+
+        M = np.zeros(n)
+        p = math.floor(N/n)
+
+        for j in range(1,n+1):
+
+            M[j - 1] = np.mean(y[p*(j-1):p*j])
+
+    elif whatType == 'len':
+
+        if N > 2*n:
+
+            pn = math.floor(N / n)
+            M = np.zeros(pn)
+
+            for j in range(1,pn + 1):
+
+                M[j-1] = np.mean(y[(j-1)*n:j*n])
+
+        else:
+
+            return
+
+    s = np.std(y,ddof = 1)
+    sdav = np.std(M,ddof = 1)
+
+    out = sdav / s
+
+    return out
+def EX_MovingThreshold(y,a = 1,b = .1):
+
+    if b < 0 or b > 1:
+
+        print("b must be between 0 and 1")
+        return None
+
+    N = len(y)
+    y = np.absolute(y)
+    q = np.zeros(N)
+    kicks = np.zeros(N)
+
+    q[0] = 1
+
+    for i in range(1,N):
+
+        if y[i] > q[i-1]:
+
+            q[i] = (1 + a) * y[i]
+            kicks[i] = q[i] - q[i-1]
+
+        else:
+
+            q[i] = ( 1 - b ) *  q[i-1]
+
+
+    outDict = {}
+
+    outDict['meanq'] = np.mean(q)
+    outDict['medianq'] = np.median(q)
+    outDict['iqrq'] = stats.iqr(q)
+    outDict['maxq'] = np.max(q)
+    outDict['minq'] = np.min(q)
+    outDict['stdq'] = np.std(q)
+    outDict['meanqover'] = np.mean(q - y)
+
+
+
+    outDict['pkick'] = np.sum(kicks) / N - 1
+    fkicks = np.argwhere(kicks > 0).flatten()
+    Ikicks = np.diff(fkicks)
+    outDict['stdkicks'] = np.std(Ikicks)
+    outDict['meankickf'] = np.mean(Ikicks)
+    outDict['mediankicksf'] = np.median(Ikicks)
+
+    return outDict
+
+def SY_DriftingMean(y,howl = 'num',l = ''):
+
+    N = len(y)
+
+    if howl == 'num':
+
+        if l != '':
+
+            l = math.floor(N/l)
+
+    if l == '':
+
+        if howl == 'num':
+
+            l = 5
+
+        elif howl == 'fix':
+
+            l = 200
+
+    if l == 0 or N < l:
+
+        return
+
+    numFits = math.floor(N / l)
+    z = np.zeros((l,numFits))
+
+    for i in range(0,numFits):
+
+        z[:,i] = y[i*l :(i + 1)*l]
+
+
+
+    zm = np.mean(z,axis = 0)
+    zv = np.var(z,axis = 0,ddof = 1)
+
+    meanvar = np.mean(zv)
+    maxmean = np.max(zm)
+    minmean = np.min(zm)
+    meanmean = np.mean(zm)
+
+    outDict = {}
+
+    outDict['max'] = maxmean/meanvar
+    outDict['min'] = minmean/meanvar
+    outDict['mean'] = meanmean/meanvar
+    outDict['meanmaxmin'] = (outDict['max']+outDict['min'])/2
+    outDict['meanabsmaxmin'] = (np.absolute(outDict['max'])+np.absolute(outDict['min']))/2
+
+
+    return outDict
+
+def f_entropy(x):
+
+    h = -np.sum(np.multiply(x[ x > 0],np.log(x[x > 0])))
+
+    return h
+
+def SB_MotifTwo(y,binarizeHow = 'diff'):
+
+    yBin = BF_Binarize(y,binarizeHow)
+
+    N = len(yBin)
+
+    r1 = (yBin == 1)
+
+    r0 = (yBin == 0)
+
+    outDict = {}
+
+    outDict['u'] = np.mean(r1)
+    outDict['d'] = np.mean(r0)
+
+    pp  = np.asarray([ np.mean(r1), np.mean(r0)])
+
+    outDict['h'] = f_entropy(pp)
+
+    r1 = r1[:-1]
+    r0 = r0[:-1]
+
+    rs1 = [r0,r1]
+
+    rs2 = [[0,0],[0,0]]
+    pp = np.zeros((2,2))
+
+    letters = ['d','u']
+
+    for i in range(2):
+
+        l1 = letters[i]
+
+        for j in range(2):
+
+            l2 = letters[j]
+
+            rs2[i][j] = np.logical_and(rs1[i],yBin[1:] == j)
+
+            outDict[l1 + l2] = np.mean(rs2[i][j])
+
+            pp[i,j] = np.mean(rs2[i][j])
+
+            rs2[i][j] = rs2[i][j][:-1]
+
+    outDict['hh'] = f_entropy(pp)
+
+    rs3 = [[[0,0],[0,0]],[[0,0],[0,0]]]
+    pp = np.zeros((2,2,2))
+
+    for i in range(2):
+
+        l1 = letters[i]
+
+        for j in range(2):
+
+            l2 = letters[j]
+
+            for k in range(2):
+
+                l3 = letters[k]
+
+                rs3[i][j][k] =np.logical_and(rs2[i][j],yBin[2:] == k)
+
+                outDict[l1 + l2 + l3] = np.mean(rs3[i][j][k])
+
+                pp[i,j,k] = np.mean(rs3[i][j][k])
+
+                rs3[i][j][k] = rs3[i][j][k][:-1]
+
+    outDict['hhh'] = f_entropy(pp)
+
+    rs4 = [[[[0,0],[0,0]],[[0,0],[0,0]]],[[[0,0],[0,0]],[[0,0],[0,0]]]]
+    pp = np.zeros((2,2,2,2))
+
+    for i in range(2):
+
+        l1 = letters[i]
+
+        for j in range(2):
+
+            l2 = letters[j]
+
+            for k in range(2):
+
+                l3 = letters[k]
+
+                for l in range(2):
+
+                    l4 = letters[l]
+
+                    rs4[i][j][k][l] =np.logical_and(rs3[i][j][k],yBin[3:] == l)
+
+                    outDict[l1 + l2 + l3 + l4] = np.mean(rs4[i][j][k][l])
+
+                    pp[i,j,k,l] = np.mean(rs4[i][j][k][l])
+
+
+    outDict['hhhh'] = f_entropy(pp)
+
+
+    return outDict
 def time_series_dependent_algos(y,algos,results,t):
         if np.count_nonzero(np.isnan(y)) > 0:
             #print(y)
@@ -1199,31 +1718,31 @@ def time_series_dependent_algos(y,algos,results,t):
                     i = i + 1
                     continue
 
-                results['AutoCorr lag ' + str(i)] = c
+                results['CO_AutoCorr lag ' + str(i)] = c
                 i = i + 1
 
         #print('f1')
         if 'CO_f1ecac' in algos:
-            results['f1ecac'] = CO_f1ecac(y)
+            results['CO_f1ecac'] = CO_f1ecac(y)
 
         #print('first min')
         if 'CO_FirstMin' in algos:
-            results['FirstMin'] = CO_FirstMin(y)
+            results['CO_FirstMin'] = CO_FirstMin(y)
 
         if 'CO_FirstZero' in algos:
-            results['FirstZero'] = CO_FirstZero(y)
+            results['CO_FirstZero'] = CO_FirstZero(y)
 
         #print('glscf')
         if 'CO_glscf' in algos:
             for alpha in range(1,5):
                 for beta in range(1,5):
-                    results['glscf ' + str(alpha) + ' ' + str(beta)] = CO_glscf(y,alpha,beta)
+                    results['CO_glscf ' + str(alpha) + ' ' + str(beta)] = CO_glscf(y,alpha,beta)
 
         if 'CO_tc3' in algos:
-            results['tc3'] = CO_tc3(y)
+            results['CO_tc3'] = CO_tc3(y)
 
         if 'CO_trev' in algos:
-            results['trev'] = CO_trev(y)
+            results['CO_trev'] = CO_trev(y)
 
         # if 'dfa' in algos:
         #     results['dfa'] = dfa(y)
@@ -1237,26 +1756,26 @@ def time_series_dependent_algos(y,algos,results,t):
             results['IsSeasonal?'] = DT_IsSeasonal(y)
 
         if 'EN_ApEn' in algos:
-            results['ApEn'] = EN_ApEn(y)
+            results['EN_ApEn'] = EN_ApEn(y)
 
 
         if 'EN_CID' in algos:
             out = EN_CID(y)
-            results = parse_outputs(out,results,'Complexity')
+            results = parse_outputs(out,results,'EN_CID')
 
         if 'EN_PermEn' in algos:
-            results['PermEn 2, 1'] = EN_PermEn(y)
-            results['PermEn 3, 6'] = EN_PermEn(y,3,6)
+            results['EN_PermEn 2, 1'] = EN_PermEn(y)
+            results['EN_PermEn 3, 6'] = EN_PermEn(y,3,6)
 
         if 'EN_SampEn' in algos:
             out = EN_SampEn(y)
-            results['Sample Entropy'] = out["Sample Entropy"]
-            results["Quadratic Entropy"] = out["Quadratic Entropy"]
+            results['EN_Sample Entropy'] = out["Sample Entropy"]
+            results["EN_Quadratic Entropy"] = out["Quadratic Entropy"]
 
 
         if 'IN_AutoMutualInfo' in algos:
             out = IN_AutoMutualInfo(y)
-            results = parse_outputs(out,results,'Auto Mutual Info')
+            results = parse_outputs(out,results,'IN_AutoMutualInfo')
 
         if 'SY_Trend'in algos:
             if not BF_iszscored(y):
@@ -1269,7 +1788,71 @@ def time_series_dependent_algos(y,algos,results,t):
         #     results['Hurst Exp'] = SC_HurstExp(y)
         # if 'SC_DFA' in algos:
         #     results['DFA alpha'] = SC_DFA(y)
+        how = ['absfar','absclose']
+        ps = [.6]
 
+        for h in how:
+
+            for p in ps:
+
+                out = DN_RemovePoints(y,h,p)
+
+                if isinstance(out,dict):
+
+                    results = parse_outputs(out,results,'DN_RemovePoints' + str(h) + '_' + str(p))
+
+        results['DK_crinkle'] = DK_crinkle(y)
+        results['DK_theilerQ'] = DK_theilerQ(y)
+
+        binaryMethods = ['diff']
+
+        for bMethod in binaryMethods:
+
+            out = SB_MotifTwo(y,bMethod)
+
+            if isinstance(out,dict):
+
+                results = parse_outputs(out,results,'SB_MotifTwo_'  + bMethod)
+
+        binarizeHows = ['diff','mean','median','iqr']
+
+        for binary in binarizeHows:
+
+            out = SB_BinaryStats(y,binary)
+
+            if isinstance(out,dict):
+
+                results = parse_outputs(out,results,'SB_BinaryMethod_' + str(binary))
+
+        types = ['seg','len']
+        numSegs = [2,3,4,5,10]
+
+        for ty in types:
+
+            for seg in numSegs:
+
+                out = SY_StatAv(y,ty,seg)
+
+                if isinstance(out,dict):
+
+                    results = parse_outputs(out,results,'SY_StatAv' + str(ty) + '_ ' + str(seg) + '_')
+        samplAs = [.25,.5,1]
+        bs = [.05,.1,.25]
+
+        for a in samplAs:
+
+            for b in bs:
+
+                out = EX_MovingThreshold(y,a,b)
+
+                if isinstance(out,dict):
+
+                    results = parse_outputs(out,results,'EX_MovingThreshold_a' + str(a)+ '_b' + str(b))
+        out = SY_DriftingMean(y)
+
+        if isinstance(out,dict):
+
+            results = parse_outputs(out,results,'SY_DriftingMean_')
         return results
 
 def run_algos(y,algos = 'all',last_non_nan = np.nan,t=1):
@@ -1290,13 +1873,12 @@ def run_algos(y,algos = 'all',last_non_nan = np.nan,t=1):
     else:
         return results
     #if y is only 1 value don't calc time depedent stuff
-    if results['std'] == 0.0:
+    if results['DN_std'] == 0.0:
 
         return results
 
     #impute data for algos that can't run with nans
     y_imputed = impute(y,last_non_nan)
-
 
     results = time_series_dependent_algos(impute(y,last_non_nan),algos,results,t)
 
@@ -1397,6 +1979,7 @@ def pandas_to_spark(pandas_df):
       struct_list.append(define_structure(column, typo))
     p_schema = StructType(struct_list)
     return sqlContext.createDataFrame(pandas_df, p_schema)
+
 def get_interval(interval_length,end_time,times):
     # interval_length is in seconds
     # end_time is in seconds
@@ -1407,24 +1990,22 @@ output_location = sys.argv[1]
 
 sc =SparkContext()
 sqlContext = SQLContext(sc)
-#test = sc.textFile("/Users/justinniestroy-admin/Downloads/UVA_7129_HR.csv").map(lambda line: line.split(","))
 test = sc.textFile(file_location).map(lambda line: line.split(","))
+
 a = np.array(test.collect())
 a = a[1:,:]
 a[10562,0] = a[10561,0]
+
 times = a[:,1].astype(float)
 hr = a[:,0].astype(float)
 step_size=60*5
 interval_length = 60*10
 end_times = np.arange(np.min(times) + interval_length,np.max(times),step_size)
+
 results = []
 for t in end_times:
     results.append(all_times(t,hr,times))
-#print(results)
+
 df = pd.DataFrame(results)
-# minioClient = Minio('minionas.int.uvadcos.io',
-#                     access_key='breakfast',
-#                     secret_key='breakfast',
-#                     secure=False)
 spark_df = pandas_to_spark(df).coalesce(1)
 spark_df.write.option("header", "true").csv(output_location)

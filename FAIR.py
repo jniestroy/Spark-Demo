@@ -29,7 +29,6 @@ def upload_file(file_path,metadata,hash = '',token = TOKEN):
             for byte_block in iter(lambda: f.read(4096),b""):
                 sha256_hash.update(byte_block)
         hash = sha256_hash.hexdigest()
-
     upload_response = requests.post(
         FAIR_URL + 'transfer/data',
         files = {
